@@ -1,8 +1,25 @@
-// ??? 
-export type OrderItem = { product: string; qty: number };
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 
-export class OrderModel {
-  items: OrderItem[];
-  createdAt: Date;
-  customer: string;
+class OrderItem {
+  @Prop()
+  product: string;
+
+  @Prop()
+  qty: number;
 }
+
+export interface OrderModel {}
+
+@Schema({ collection: 'Orders' })
+export class OrderModel {
+  @Prop({ type: () => [OrderItem], _id: false })
+  items: OrderItem[];
+
+  @Prop()
+  customer: string;
+
+  @Prop()
+  comment: string;
+}
+
+export const OrderSchema = SchemaFactory.createForClass(OrderModel);
