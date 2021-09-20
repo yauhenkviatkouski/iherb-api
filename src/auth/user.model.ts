@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
-@Schema()
+export interface UserModel extends Document {}
+
+@Schema({ collection: 'Users' })
 export class UserModel {
   @Prop({ unique: true })
   login: string;

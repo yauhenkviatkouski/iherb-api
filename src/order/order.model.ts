@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { Document } from 'mongoose';
 
 class OrderItem {
   @Prop()
@@ -8,7 +9,7 @@ class OrderItem {
   qty: number;
 }
 
-export interface OrderModel {}
+export interface OrderModel extends Document {}
 
 @Schema({ collection: 'Orders' })
 export class OrderModel {

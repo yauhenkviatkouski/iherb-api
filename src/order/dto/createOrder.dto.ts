@@ -1,4 +1,4 @@
-import { IsArray, IsDataURI, IsNumber, IsString } from "class-validator";
+import { IsArray, IsDataURI, IsNumber, IsString } from 'class-validator';
 
 class OrderItem {
   @IsDataURI()
@@ -14,5 +14,4 @@ export class CreateOrderDto {
 
   @IsString()
   customer: string;
-
 }

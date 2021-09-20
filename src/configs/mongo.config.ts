@@ -16,9 +16,9 @@ const getMongoString = (configService) =>
   ':' +
   configService.get('MONGO_PASSWORD') +
   '@' +
-  configService.get('MONGO_HOST');
-// '/' +
-// 'myFirstDatabase?retryWrites=true&w=majority';
+  configService.get('MONGO_HOST') +
+  '/' +
+  configService.get('MONGO_DATABASE_NAME');
 
 const getMongoOptions = () => ({
   useNewUrlParser: true,
