@@ -2,7 +2,6 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { compare, genSalt, hash } from 'bcryptjs';
-import { exec } from 'child_process';
 import { Model } from 'mongoose';
 import { AuthDto } from './dto/auth.dto';
 import { UserModel } from './user.model';
