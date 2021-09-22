@@ -1,8 +1,11 @@
 import { Controller, Get, Param } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { ProductService } from './product.service';
 
 @Controller('product')
 export class ProductController {
-  @Get(':uri')
-  async get(@Param('uri') uri: string) {}
+  constructor(private readonly productService: ProductService) {}
+  @Get('iherb/:uri')
+  async get(@Param('uri') uri: string) {
+    return this.productService.getProductInfo(uri);
+  }
 }
