@@ -2,22 +2,13 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import { JSDOM, VirtualConsole } from 'jsdom';
-import { firstValueFrom, Observable } from 'rxjs';
+import { delay, firstValueFrom, Observable } from 'rxjs';
+import { delayPromise } from 'src/utils/delayPromise';
 import { ProductModel } from './product.model';
-
-const parseOptions = {
-  comment: false,
-  blockTextElements: {
-    script: true,
-    noscript: true,
-    style: true,
-    pre: true,
-  },
-};
 
 type ParsedDocument = {
   rawHtml: string;
-  type: 'cart' | 'product';
+  type: 'cart' | 'showcase';
 };
 
 @Injectable()
@@ -30,26 +21,56 @@ export class ProductService {
 
   private async getHtmlPage(uri: string): Promise<ParsedDocument | null> {
     const fixedUri = uri.replace(/.+iherb.com/g, 'https://by.iherb.com');
-    const { data, request }: AxiosResponse = await firstValueFrom(
-      this.httpService.get(fixedUri),
-    );
-    const iherbUriType =
-      (request.res.responseUrl.includes('iherb.com/cart/') && 'cart') ||
-      (request.res.responseUrl.includes('iherb.com/pr/') && 'product') ||
-      null;
+    try {
+      const { data, request }: AxiosResponse = await firstValueFrom(
+        this.httpService.get(fixedUri),
+      );
+      const iherbUriType =
+        (request.res.responseUrl.includes('iherb.com/cart/') && 'cart') ||
+        (request.res.responseUrl.includes('iherb.com/pr/') && 'showcase') ||
+        null;
 
-    if (!iherbUriType) {
+      if (!iherbUriType) {
+        return null;
+      }
+      return {
+        type: iherbUriType,
+        rawHtml: data,
+      };
+    } catch {
       return null;
     }
-    return {
-      type: iherbUriType,
-      rawHtml: data,
-    };
   }
 
-  async getProductInfo(uri: string) {
+  async getProductsInfo(uri: string) {
     const page = await this.getHtmlPage(uri);
-    const dom = new JSDOM(page.rawHtml, { virtualConsole: new VirtualConsole() });
+    if (!page) {
+      return null;
+    }
+    if (page.type === 'cart') {
+      const productsConcise = this.getProductsFromCart(page.rawHtml);
+      return Promise.all(
+        productsConcise.map(async (product) => {
+          const productPage = await this.getHtmlPage(product.link);
+          if (!productPage) {
+            return {
+              ...product,
+              warning: 'remaining data is not available',
+            };
+          }
+          if (productPage.type !== 'showcase') {
+            return null;
+          }
+          return this.getProductFromShowcase(productPage.rawHtml);
+        }),
+      );
+    } else {
+      return [this.getProductFromShowcase(page.rawHtml)];
+    }
+  }
+
+  getProductsFromCart(cartPageHtml: string) {
+    const dom = new JSDOM(cartPageHtml, { virtualConsole: new VirtualConsole() });
     const document = dom.window.document;
     const productRows = Array.from(
       document.querySelectorAll('[data-qa-element="product-cell"]'),
@@ -62,7 +83,6 @@ export class ProductService {
       )[0];
 
       const qty = Array.from(productRow.childNodes).filter((node) => {
-        console.log(node.nodeName);
         return node.nodeName === 'DIV';
       })[3].firstChild.textContent;
 
@@ -72,47 +92,19 @@ export class ProductService {
         qty,
       };
     });
+  }
 
-    // const $ = cheerioModule.load(page.document);
-    // console.log(
-    //   '🚀 ~ file: product.service.ts ~ line 54 ~ ProductService ~ getProductInfo ~ $',
-    //   Array.from(dom.window.document.querySelectorAll('[data-qa-element="product-cell"]')).map((productRow) => {
-    //       const tagA = productRow
-    //         .filter((tagA) => tagA.getAttribute('href').includes('iherb.com/pr/'))[0];
-    //       const productName = tagA.getAttribute('aria-label');
-    //       const productLink = tagA.getAttribute('href');
-    //       return productRow.childNodes[3].childNodes[0].toString();
-    //       // console.log('🚀', productRow.childNodes[3].childNodes[0]);
-    //       // throw new Error();
+  getProductFromShowcase(showcasePageHtml: string) {
+    const dom = new JSDOM(showcasePageHtml, { virtualConsole: new VirtualConsole() });
+    const document = dom.window.document;
 
-    //       // name: productRow.childNodes[1].childNodes[2].childNodes[0].textContent;
-    //     });
-    // );
-    // if (!page) {
-    //   return false;
-    // }
+    const brand = document.querySelector('#breadCrumbs').childNodes[3].textContent;
+    const name = document.querySelector('#name').textContent.replace(`${brand}, `, '');
 
-    // if (page.type === 'cart') {
-    //   return page.document
-    //     .querySelectorAll('[data-qa-element="product-cell"]')
-    //     .map((productRow) => {
-    //       const tagA = productRow
-    //         .querySelectorAll('a')
-    //         .filter((tagA) => tagA.getAttribute('href').includes('iherb.com/pr/'))[0];
-    //       const productName = tagA.getAttribute('aria-label');
-    //       const productLink = tagA.getAttribute('href');
-    //       return productRow.childNodes[3].childNodes[0].toString();
-    //       // console.log('🚀', productRow.childNodes[3].childNodes[0]);
-    //       // throw new Error();
-
-    //       // name: productRow.childNodes[1].childNodes[2].childNodes[0].textContent;
-    //     });
-    // }
-
-    // return {
-    //   name: document.querySelector('#name').textContent,
-    //   brand: document.querySelector('#breadCrumbs').childNodes[3].textContent,
-    //   price: document.querySelector('#price').textContent,
-    // };
+    return {
+      name: name.charAt(0).toLocaleUpperCase() + name.slice(1),
+      brand,
+      price: document.querySelector('#price').textContent,
+    };
   }
 }
