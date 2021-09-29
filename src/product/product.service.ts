@@ -2,9 +2,8 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import { JSDOM, VirtualConsole } from 'jsdom';
-import { delay, firstValueFrom, Observable } from 'rxjs';
-import { delayPromise } from 'src/utils/delayPromise';
-import { ProductModel } from './product.model';
+import { firstValueFrom } from 'rxjs';
+import { addByToUri } from 'src/utils/utils';
 
 type ParsedDocument = {
   rawHtml: string;
@@ -13,14 +12,10 @@ type ParsedDocument = {
 
 @Injectable()
 export class ProductService {
-  constructor(
-    // @Inject(ProductModel)
-    // private readonly productModel: ProductModel,
-    private readonly httpService: HttpService,
-  ) {}
+  constructor(private readonly httpService: HttpService) {}
 
   private async getHtmlPage(uri: string): Promise<ParsedDocument | null> {
-    const fixedUri = uri.replace(/.+iherb.com/g, 'https://by.iherb.com');
+    const fixedUri = addByToUri(uri);
     try {
       const { data, request }: AxiosResponse = await firstValueFrom(
         this.httpService.get(fixedUri),
@@ -61,7 +56,10 @@ export class ProductService {
           if (productPage.type !== 'showcase') {
             return null;
           }
-          return this.getProductFromShowcase(productPage.rawHtml);
+          return {
+            ...this.getProductFromShowcase(productPage.rawHtml),
+            link: product.link,
+          };
         }),
       );
     } else {
@@ -76,9 +74,9 @@ export class ProductService {
       document.querySelectorAll('[data-qa-element="product-cell"]'),
     );
     return productRows.map((productRow) => {
-      const link = Array.from(productRow.querySelectorAll('a')).filter(
+      const linkElement = Array.from(productRow.querySelectorAll('a')).filter(
         (linkElement) =>
-          linkElement.getAttribute('href').includes('iherb.com/pr/') &&
+          linkElement.getAttribute('href')?.includes('iherb.com/pr/') &&
           linkElement.querySelector('div'),
       )[0];
 
@@ -87,8 +85,8 @@ export class ProductService {
       })[3].firstChild.textContent;
 
       return {
-        name: link.firstChild.textContent,
-        link: link.getAttribute('href'),
+        name: linkElement.firstChild.textContent,
+        link: addByToUri(linkElement.getAttribute('href')),
         qty,
       };
     });
@@ -101,10 +99,20 @@ export class ProductService {
     const brand = document.querySelector('#breadCrumbs').childNodes[3].textContent;
     const name = document.querySelector('#name').textContent.replace(`${brand}, `, '');
 
+    const regularPriceString = document
+      .querySelector('#price')
+      .textContent.replace(/\sBr/, '');
+
+    const superPriceString = document
+      .querySelector('#super-special-price')
+      ?.querySelector('b')
+      ?.textContent.replace(/Br/, '');
+
     return {
       name: name.charAt(0).toLocaleUpperCase() + name.slice(1),
       brand,
-      price: document.querySelector('#price').textContent,
+      regularPrice: Math.round(Number(regularPriceString) * 100),
+      superPrice: Math.round(Number(superPriceString) * 100) || '',
     };
   }
 }
