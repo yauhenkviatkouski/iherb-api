@@ -5,7 +5,7 @@ export interface ItelegramOptions {
   token: string;
 }
 
-export interface ITelegramModuleOptions extends Pick<ModuleMetadata, 'imports'> {
+export interface ITelegramModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> {
   useFactory: (...args: any[]) => Promise<ItelegramOptions> | ItelegramOptions;
   inject?: any[];
 }
