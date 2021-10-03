@@ -9,6 +9,7 @@ import { getMongoConfig } from './configs/mongo.config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TelegramModule } from './telegram/telegram.module';
 import { getTelegramConfig } from './configs/telegram.config';
+import { ProductService } from './product/product.service';
 
 @Module({
   imports: [
@@ -22,7 +23,7 @@ import { getTelegramConfig } from './configs/telegram.config';
     AuthModule,
     OrderModule,
     TelegramModule.forRootAsync({
-      imports: [ConfigModule],
+      imports: [ConfigModule, ProductModule],
       inject: [ConfigService],
       useFactory: getTelegramConfig,
     }),
