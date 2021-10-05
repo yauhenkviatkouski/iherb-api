@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { ProductModule } from './product/product.module';
+import { ProductModule } from './iherb/iherb.module';
 import { AuthModule } from './auth/auth.module';
 import { OrderModule } from './order/order.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -9,7 +9,7 @@ import { getMongoConfig } from './configs/mongo.config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { TelegramModule } from './telegram/telegram.module';
 import { getTelegramConfig } from './configs/telegram.config';
-import { ProductService } from './product/product.service';
+import { IherbService } from './iherb/iherb.service';
 
 @Module({
   imports: [

@@ -10,8 +10,17 @@ type ParsedDocument = {
   type: 'cart' | 'showcase';
 };
 
+type IherbProductInfo = {
+  link: string;
+  name: string;
+  brand?: string;
+  regularPrice?: number;
+  superPrice?: number;
+  warning?: string;
+};
+
 @Injectable()
-export class ProductService {
+export class IherbService {
   constructor(private readonly httpService: HttpService) {}
 
   private async getHtmlPage(uri: string): Promise<ParsedDocument | null> {
@@ -37,7 +46,7 @@ export class ProductService {
     }
   }
 
-  async getProductsInfo(uri: string) {
+  async getProductsInfo(uri: string): Promise<IherbProductInfo[] | null> {
     const page = await this.getHtmlPage(uri);
     if (!page) {
       return null;
@@ -109,10 +118,11 @@ export class ProductService {
       ?.textContent.replace(/Br/, '');
 
     return {
+      link: showcasePageHtml,
       name: name.charAt(0).toLocaleUpperCase() + name.slice(1),
       brand,
       regularPrice: Math.round(Number(regularPriceString) * 100),
-      superPrice: Math.round(Number(superPriceString) * 100) || '',
+      superPrice: Math.round(Number(superPriceString) * 100) || null,
     };
   }
 }

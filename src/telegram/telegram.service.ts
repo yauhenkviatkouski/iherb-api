@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ProductService } from 'src/product/product.service';
+import { IherbService } from 'src/iherb/iherb.service';
 import { Telegraf } from 'telegraf';
 import { MESSAGES, TELEGRAM_MODULE_OPTIONS } from './telegram.constants';
 import { ItelegramOptions } from './telegram.interface';
@@ -11,7 +11,7 @@ export class TelegramService {
 
   constructor(
     @Inject(TELEGRAM_MODULE_OPTIONS) options: ItelegramOptions,
-    private readonly productService: ProductService,
+    private readonly IherbService: IherbService,
   ) {
     this.bot = new Telegraf(options.token);
     this.options = options;
