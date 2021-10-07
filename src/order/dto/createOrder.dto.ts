@@ -6,6 +6,9 @@ class OrderItem {
 
   @IsNumber()
   qty: number;
+
+  @IsNumber()
+  price: number;
 }
 
 export class CreateOrderDto {
@@ -14,4 +17,7 @@ export class CreateOrderDto {
 
   @IsString()
   customer: string;
+
+  @IsString()
+  shipment: string;
 }

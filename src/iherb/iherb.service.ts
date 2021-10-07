@@ -10,7 +10,7 @@ type ParsedDocument = {
   type: 'cart' | 'showcase';
 };
 
-type IherbProductInfo = {
+export type IherbProductInfo = {
   link: string;
   name: string;
   brand?: string;

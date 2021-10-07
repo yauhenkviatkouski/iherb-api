@@ -1,12 +1,15 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 
 class OrderItem {
   @Prop()
-  product: string;
+  productName: string;
 
   @Prop()
   qty: number;
+
+  @Prop()
+  price: number;
 }
 
 export interface OrderModel extends Document {}
@@ -17,7 +20,10 @@ export class OrderModel {
   items: OrderItem[];
 
   @Prop()
-  customer: string;
+  customer: Types.ObjectId;
+
+  @Prop()
+  shipment: string;
 
   @Prop()
   comment: string;
