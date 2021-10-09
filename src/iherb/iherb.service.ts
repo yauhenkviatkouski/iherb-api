@@ -11,8 +11,9 @@ type ParsedDocument = {
 };
 
 export type IherbProductInfo = {
-  link: string;
   name: string;
+  link: string;
+  qty?: number;
   brand?: string;
   regularPrice?: number;
   superPrice?: number;
@@ -46,7 +47,9 @@ export class IherbService {
     }
   }
 
-  async getProductsInfo(uri: string): Promise<IherbProductInfo[] | null> {
+  async getProductsInfo(
+    uri: string,
+  ): Promise<IherbProductInfo[] | IherbProductInfo | null> {
     const page = await this.getHtmlPage(uri);
     if (!page) {
       return null;
@@ -59,7 +62,7 @@ export class IherbService {
           if (!productPage) {
             return {
               ...product,
-              warning: 'remaining data is not available',
+              warning: 'product is not available in current region',
             };
           }
           if (productPage.type !== 'showcase') {
@@ -68,15 +71,16 @@ export class IherbService {
           return {
             ...this.getProductFromShowcase(productPage.rawHtml),
             link: product.link,
+            qty: product.qty,
           };
         }),
       );
-    } else {
-      return [this.getProductFromShowcase(page.rawHtml)];
+    } else if (page.type === 'showcase') {
+      return { ...this.getProductFromShowcase(page.rawHtml), link: uri };
     }
   }
 
-  getProductsFromCart(cartPageHtml: string) {
+  private getProductsFromCart(cartPageHtml: string) {
     const dom = new JSDOM(cartPageHtml, { virtualConsole: new VirtualConsole() });
     const document = dom.window.document;
     const productRows = Array.from(
@@ -96,12 +100,12 @@ export class IherbService {
       return {
         name: linkElement.firstChild.textContent,
         link: addByToUri(linkElement.getAttribute('href')),
-        qty,
+        qty: Number(qty),
       };
     });
   }
 
-  getProductFromShowcase(showcasePageHtml: string) {
+  private getProductFromShowcase(showcasePageHtml: string) {
     const dom = new JSDOM(showcasePageHtml, { virtualConsole: new VirtualConsole() });
     const document = dom.window.document;
 
@@ -118,7 +122,6 @@ export class IherbService {
       ?.textContent.replace(/Br/, '');
 
     return {
-      link: showcasePageHtml,
       name: name.charAt(0).toLocaleUpperCase() + name.slice(1),
       brand,
       regularPrice: Math.round(Number(regularPriceString) * 100),
