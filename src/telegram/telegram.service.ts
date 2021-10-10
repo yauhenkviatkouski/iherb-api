@@ -11,10 +11,11 @@ interface ExtendedSession extends Scenes.WizardSession {
   // will be available under `ctx.session.mySessionProp`
   isLoading: boolean;
   cart: IherbProductInfo[];
+  shipment: string;
 }
 
 interface ExtendedContext extends Context {
-  isLoading: boolean;
+  isLoading: boolean; // TODO
   session: ExtendedSession;
   scene: Scenes.SceneContextScene<ExtendedContext, Scenes.WizardSessionData>;
   wizard: Scenes.WizardContextWizard<ExtendedContext>;
@@ -28,15 +29,14 @@ export class TelegramService {
     @Inject(TELEGRAM_MODULE_OPTIONS) options: ItelegramOptions,
     private readonly iherbService: IherbService,
   ) {
-    // const stepAskUri = new Composer<Scenes.WizardContext>();
-    // stepAskUri.use(async (ctx) => {
-    //   await ctx.reply('Send link to iherb cart or product...');
-    //   return ctx.wizard.next();
-    // });
-
     const stepHandleUri = new Composer<ExtendedContext>();
 
     stepHandleUri.hears(/.{0,}iherb\.com.{0,}/i, async (ctx) => {
+      if (ctx.session.isLoading) {
+        return;
+      }
+      console.log('Cursor: ', ctx.wizard.cursor);
+
       const uri = ctx.update.message.text;
       ctx.reply(MESSAGES.LOADING_IHERB);
       ctx.session.isLoading = true;
@@ -48,6 +48,7 @@ export class TelegramService {
       }
 
       if (Array.isArray(iHerbProductData)) {
+        ctx.session.cart = [...iHerbProductData];
         let totalPrice = 0;
         const table = iHerbProductData.reduce((acc, product) => {
           totalPrice += product.qty * product.regularPrice;
@@ -57,13 +58,28 @@ export class TelegramService {
               product.regularPrice / 100
             } Br*\n---\n`
           );
-        }, 'Ваш заказ: \n');
-        ctx.replyWithMarkdown(table + `*Общая стоимость: ${totalPrice / 100} Br*`, {
-          parse_mode: 'Markdown',
-        });
+        }, 'Ваш заказ: \n\n');
+        await ctx.replyWithMarkdown(
+          table + `*Общая стоимость: ${totalPrice / 100} Br*\n*Всё ок?*`,
+          Markup.keyboard([['Все ок!', 'Отмена']])
+            .oneTime()
+            .resize(),
+        );
       }
+    });
 
-      // await ctx.reply(JSON.stringify(iHerbProductData));
+    stepHandleUri.action('Отмена', async (ctx) => {
+      ctx.reply('Отмена\n' + MESSAGES.ON_WAITING_ORDER);
+      ctx.wizard.back();
+    });
+    stepHandleUri.hears('Все ок!', async (ctx) => {
+      ctx.wizard.next();
+      ctx.reply(
+        'Отлично! Теперь выберите тип доставки:',
+        Markup.keyboard([['Самовывоз', 'Евроопт']])
+          .oneTime()
+          .resize(),
+      );
     });
 
     stepHandleUri.use((ctx) => {
@@ -73,22 +89,45 @@ export class TelegramService {
       ctx.replyWithMarkdown(MESSAGES.ON_WAITING_ORDER);
     });
 
+    const stepHandleShipment = new Composer<ExtendedContext>();
+
+    stepHandleShipment.hears('Самовывоз', async (ctx) => {
+      ctx.session.shipment = 'Самовывоз';
+      await ctx.reply(
+        'Самовывоз.\nПодтвердить заказ?',
+        Markup.keyboard([['Подтвердить', 'Отмена']])
+          .oneTime()
+          .resize(),
+      );
+      // ctx.wizard.next();
+    });
+
+    stepHandleShipment.hears('Евроопт', async (ctx) => {
+      ctx.session.shipment = 'evroopt';
+      await ctx.reply('Евроопт.\nВведите адрес пункта выдачи...');
+      // ctx.wizard.next();
+    });
+
+    stepHandleShipment.hears('Подтвердить', async (ctx) => {
+      await ctx.reply(
+        'Теперь данные о товарах и клиенте полетели в google sheets (на самом деле еще не полетели)',
+      );
+      ctx.wizard.selectStep(0);
+    });
+
+    stepHandleShipment.on('message', async (ctx) => {
+      if (ctx.session.shipment === 'evroopt') {
+        await ctx.reply(
+          'Теперь данные о товарах и клиенте полетели в google sheets (на самом деле еще не полетели)',
+        );
+      }
+      ctx.wizard.selectStep(0);
+    });
+
     const iherbWizard = new Scenes.WizardScene(
       'iherbWizard',
-      // stepAskUri,
       stepHandleUri,
-      // async (ctx) => {
-      //   await ctx.reply('Step 3');
-      //   return ctx.wizard.next();
-      // },
-      // async (ctx) => {
-      //   await ctx.reply('Step 4');
-      //   return ctx.wizard.next();
-      // },
-      // async (ctx) => {
-      //   await ctx.reply('Done');
-      //   return await ctx.scene.leave();
-      // },
+      stepHandleShipment,
     );
 
     const bot = new Telegraf<Scenes.WizardContext>(options.token);
@@ -98,10 +137,6 @@ export class TelegramService {
     bot.use(session());
     bot.use(stage.middleware());
     bot.launch();
-
-    // Enable graceful stop
-    // process.once('SIGINT', () => bot.stop('SIGINT'));
-    // process.once('SIGTERM', () => bot.stop('SIGTERM'));
   }
 
   async sendMessage(chatId, message) {
