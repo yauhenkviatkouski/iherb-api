@@ -4,9 +4,6 @@ import { Telegraf, Scenes, Markup, Composer, session, Context } from 'telegraf';
 import { MESSAGES, TELEGRAM_MODULE_OPTIONS } from './telegram.constants';
 import { ItelegramOptions } from './telegram.interface';
 
-// TODO: не все продукты доступны - попробуйте через директ, убедитесь что все доступно
-// TODO:
-
 interface ExtendedSession extends Scenes.WizardSession {
   // will be available under `ctx.session.mySessionProp`
   isLoading: boolean;
@@ -15,7 +12,7 @@ interface ExtendedSession extends Scenes.WizardSession {
 }
 
 interface ExtendedContext extends Context {
-  isLoading: boolean; // TODO
+  isLoading: boolean;
   session: ExtendedSession;
   scene: Scenes.SceneContextScene<ExtendedContext, Scenes.WizardSessionData>;
   wizard: Scenes.WizardContextWizard<ExtendedContext>;
@@ -40,7 +37,7 @@ export class TelegramService {
       const uri = ctx.update.message.text;
       ctx.reply(MESSAGES.LOADING_IHERB);
       ctx.session.isLoading = true;
-      const iHerbProductData = await iherbService.getProductsInfo(uri);
+      const iHerbProductData = await iherbService.parseUri(uri);
       ctx.session.isLoading = false;
       if (!iHerbProductData) {
         ctx.reply(MESSAGES.WRONG_LINK);
@@ -58,25 +55,25 @@ export class TelegramService {
               product.regularPrice / 100
             } Br*\n---\n`
           );
-        }, 'Ваш заказ: \n\n');
+        }, 'Your order: \n\n');
         await ctx.replyWithMarkdown(
-          table + `*Общая стоимость: ${totalPrice / 100} Br*\n*Всё ок?*`,
-          Markup.keyboard([['Все ок!', 'Отмена']])
+          table + `*Total price: ${totalPrice / 100} Br*\n*Всё ок?*`,
+          Markup.keyboard([['Ok!', 'Cancel']])
             .oneTime()
             .resize(),
         );
       }
     });
 
-    stepHandleUri.action('Отмена', async (ctx) => {
-      ctx.reply('Отмена\n' + MESSAGES.ON_WAITING_ORDER);
+    stepHandleUri.action('Cancel', async (ctx) => {
+      ctx.reply('Cancel\n' + MESSAGES.ON_WAITING_ORDER);
       ctx.wizard.back();
     });
-    stepHandleUri.hears('Все ок!', async (ctx) => {
+    stepHandleUri.hears('Ok!', async (ctx) => {
       ctx.wizard.next();
       ctx.reply(
-        'Отлично! Теперь выберите тип доставки:',
-        Markup.keyboard([['Самовывоз', 'Евроопт']])
+        'Delivery type:',
+        Markup.keyboard([['Taking away', 'Evropost']])
           .oneTime()
           .resize(),
       );
@@ -91,11 +88,11 @@ export class TelegramService {
 
     const stepHandleShipment = new Composer<ExtendedContext>();
 
-    stepHandleShipment.hears('Самовывоз', async (ctx) => {
-      ctx.session.shipment = 'Самовывоз';
+    stepHandleShipment.hears('Taking away', async (ctx) => {
+      ctx.session.shipment = 'Taking away';
       await ctx.reply(
-        'Самовывоз.\nПодтвердить заказ?',
-        Markup.keyboard([['Подтвердить', 'Отмена']])
+        'Taking away.\nConfirm?',
+        Markup.keyboard([['Confirm', 'Cancel']])
           .oneTime()
           .resize(),
       );
@@ -104,22 +101,18 @@ export class TelegramService {
 
     stepHandleShipment.hears('Евроопт', async (ctx) => {
       ctx.session.shipment = 'evroopt';
-      await ctx.reply('Евроопт.\nВведите адрес пункта выдачи...');
+      await ctx.reply('Evropost address');
       // ctx.wizard.next();
     });
 
-    stepHandleShipment.hears('Подтвердить', async (ctx) => {
-      await ctx.reply(
-        'Теперь данные о товарах и клиенте полетели в google sheets (на самом деле еще не полетели)',
-      );
+    stepHandleShipment.hears('Confirm', async (ctx) => {
+      await ctx.reply('Thanks for the order');
       ctx.wizard.selectStep(0);
     });
 
     stepHandleShipment.on('message', async (ctx) => {
       if (ctx.session.shipment === 'evroopt') {
-        await ctx.reply(
-          'Теперь данные о товарах и клиенте полетели в google sheets (на самом деле еще не полетели)',
-        );
+        await ctx.reply('Thanks for the order');
       }
       ctx.wizard.selectStep(0);
     });
@@ -136,7 +129,8 @@ export class TelegramService {
     });
     bot.use(session());
     bot.use(stage.middleware());
-    bot.launch();
+
+    // bot.launch();
   }
 
   async sendMessage(chatId, message) {

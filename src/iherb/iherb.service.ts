@@ -17,7 +17,7 @@ export type IherbProductInfo = {
   brand?: string;
   regularPrice?: number;
   superPrice?: number;
-  warning?: string;
+  isNotAvailable?: boolean;
 };
 
 @Injectable()
@@ -47,9 +47,7 @@ export class IherbService {
     }
   }
 
-  async getProductsInfo(
-    uri: string,
-  ): Promise<IherbProductInfo[] | IherbProductInfo | null> {
+  async parseUri(uri: string): Promise<IherbProductInfo[] | IherbProductInfo | null> {
     const page = await this.getHtmlPage(uri);
     if (!page) {
       return null;
@@ -62,7 +60,7 @@ export class IherbService {
           if (!productPage) {
             return {
               ...product,
-              warning: 'product is not available in current region',
+              isNotAvailable: true,
             };
           }
           if (productPage.type !== 'showcase') {
@@ -121,11 +119,17 @@ export class IherbService {
       ?.querySelector('b')
       ?.textContent.replace(/Br/, '');
 
+    const weight = document
+      .querySelector('#product-specs-list')
+      ?.querySelector('.product-weight')
+      ?.textContent.replace(/\sкг/, '');
+
     return {
       name: name.charAt(0).toLocaleUpperCase() + name.slice(1),
       brand,
       regularPrice: Math.round(Number(regularPriceString) * 100),
       superPrice: Math.round(Number(superPriceString) * 100) || null,
+      weight: Number(weight),
     };
   }
 }

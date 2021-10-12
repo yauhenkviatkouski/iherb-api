@@ -7,9 +7,8 @@ import { OrderModule } from './order/order.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getMongoConfig } from './configs/mongo.config';
 import { MongooseModule } from '@nestjs/mongoose';
-import { TelegramModule } from './telegram/telegram.module';
-import { getTelegramConfig } from './configs/telegram.config';
-import { IherbService } from './iherb/iherb.service';
+// import { TelegramModule } from './telegram/telegram.module';
+// import { getTelegramConfig } from './configs/telegram.config';
 
 @Module({
   imports: [
@@ -22,11 +21,11 @@ import { IherbService } from './iherb/iherb.service';
     ProductModule,
     AuthModule,
     OrderModule,
-    TelegramModule.forRootAsync({
-      imports: [ConfigModule, ProductModule],
-      inject: [ConfigService],
-      useFactory: getTelegramConfig,
-    }),
+    // TelegramModule.forRootAsync({
+    //   imports: [ConfigModule, ProductModule],
+    //   inject: [ConfigService],
+    //   useFactory: getTelegramConfig,
+    // }),
   ],
   controllers: [AppController],
   providers: [AppService],
