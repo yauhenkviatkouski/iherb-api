@@ -8,6 +8,9 @@ export class UserModel {
   @Prop({ unique: true })
   login: string;
 
+  @Prop({ unique: true })
+  email: string;
+
   @Prop()
   passwordHash: string;
 }

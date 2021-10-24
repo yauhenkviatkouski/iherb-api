@@ -17,17 +17,26 @@ export class AuthService {
     const salt = await genSalt(10);
     const newUser = await new this.userModel({
       login: dto.login,
+      email: dto.email,
       passwordHash: await hash(dto.password, salt),
-    });
+    }).save();
 
-    return newUser.save();
+    // await newUser.save();
+
+    return {
+      login: newUser.login,
+      email: newUser.email,
+    };
   }
 
   async findUser(login: string) {
     return this.userModel.findOne({ login }).exec();
   }
 
-  async validateUser(login: string, password: string): Promise<Pick<UserModel, 'login'>> {
+  async validateUser(
+    login: string,
+    password: string,
+  ): Promise<Pick<UserModel, 'login' | 'email'>> {
     const user = await this.findUser(login);
     if (!user) {
       throw new UnauthorizedException('User not found');
@@ -36,7 +45,7 @@ export class AuthService {
     if (!isCorrectPassword) {
       throw new UnauthorizedException('Wrong password');
     }
-    return { login: user.login };
+    return { login: user.login, email: user.email };
   }
 
   async login(login: string) {
