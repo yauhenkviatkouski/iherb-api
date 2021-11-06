@@ -13,6 +13,7 @@ type ParsedDocument = {
 export type IherbProductInfo = {
   name: string;
   link: string;
+  imageLink?: string;
   qty?: number;
   brand?: string;
   regularPrice?: number;
@@ -47,7 +48,7 @@ export class IherbService {
     }
   }
 
-  async parseUri(uri: string): Promise<IherbProductInfo[] | IherbProductInfo | null> {
+  async parseUri(uri: string): Promise<IherbProductInfo[] | null> {
     const page = await this.getHtmlPage(uri);
     if (!page) {
       return null;
@@ -74,7 +75,7 @@ export class IherbService {
         }),
       );
     } else if (page.type === 'showcase') {
-      return { ...this.getProductFromShowcase(page.rawHtml), link: uri };
+      return [{ ...this.getProductFromShowcase(page.rawHtml), link: uri }];
     }
   }
 
@@ -124,12 +125,15 @@ export class IherbService {
       ?.querySelector('.product-weight')
       ?.textContent.replace(/\sкг/, '');
 
+    const imageLink = document.querySelector('#iherb-product-image').getAttribute('src');
+
     return {
       name: name.charAt(0).toLocaleUpperCase() + name.slice(1),
       brand,
       regularPrice: Math.round(Number(regularPriceString) * 100),
       superPrice: Math.round(Number(superPriceString) * 100) || null,
       weight: Number(weight),
+      imageLink,
     };
   }
 }
