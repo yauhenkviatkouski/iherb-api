@@ -3,7 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { AxiosResponse } from 'axios';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { firstValueFrom } from 'rxjs';
-import { addByToUri } from 'src/utils/utils';
+import { addBYtoUri } from 'src/utils/utils';
 
 type ParsedDocument = {
   rawHtml: string;
@@ -26,7 +26,7 @@ export class IherbService {
   constructor(private readonly httpService: HttpService) {}
 
   private async getHtmlPage(uri: string): Promise<ParsedDocument | null> {
-    const fixedUri = addByToUri(uri);
+    const fixedUri = uri.includes('https://checkout') ? uri : addBYtoUri(uri);
     try {
       const { data, request }: AxiosResponse = await firstValueFrom(
         this.httpService.get(fixedUri),
@@ -98,7 +98,7 @@ export class IherbService {
 
       return {
         name: linkElement.firstChild.textContent,
-        link: addByToUri(linkElement.getAttribute('href')),
+        link: addBYtoUri(linkElement.getAttribute('href')),
         qty: Number(qty),
       };
     });
