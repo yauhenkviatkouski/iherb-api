@@ -7,9 +7,10 @@ import { OrderModule } from './order/order.module';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { getMongoConfig } from './configs/mongo.config';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ServeStaticModule } from '@nestjs/serve-static';
+import { join } from 'path';
 // import { TelegramModule } from './telegram/telegram.module';
 // import { getTelegramConfig } from './configs/telegram.config';
-
 @Module({
   imports: [
     ConfigModule.forRoot(),
@@ -17,6 +18,10 @@ import { MongooseModule } from '@nestjs/mongoose';
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: getMongoConfig,
+    }),
+    ServeStaticModule.forRoot({
+      rootPath: join(__dirname, '../client/', 'build'),
+      exclude: ['/api*'],
     }),
     ProductModule,
     AuthModule,

@@ -7,9 +7,9 @@ import { UserLogin } from './decorators/userLogin.decorator';
 export class AppController {
   constructor(private readonly appService: AppService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Get()
-  getHello(@UserLogin() user: string): string {
-    return this.appService.getHello(user);
-  }
+  // @UseGuards(JwtAuthGuard)
+  // @Get()
+  // getHello(@UserLogin() user: string): string {
+  //   return this.appService.getHello(user);
+  // }
 }
